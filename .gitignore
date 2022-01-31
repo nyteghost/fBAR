@@ -1,0 +1,6 @@
+token
+config.json
+doorKey.py
+key
+*.pyc
+deprec/
