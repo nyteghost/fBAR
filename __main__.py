@@ -228,7 +228,7 @@ conn.close()
 ### Retrieve ticket IDs based on information retrieved from DataBase
 UniqueNames = BackupReport.TicketNumber.unique() 
 print(UniqueNames)
-input("Press enter to continue")
+# input("Press enter to continue")
 num=0
 for tID in UniqueNames:
     idName=tID
@@ -275,7 +275,7 @@ for tID in UniqueNames:
         for i in ls:
             print(i.id)
             print(i.member['identifier'])
-            if i.member['identifier'] == None or i.member['identifier'] ==  "" or i.member['identifier'] == "MShull" or i.member['identifier'] == "BKrusac" or  i.member['identifier'] =="NTraverse" or i.member['identifier'] == "JTrimble" or i.member['identifier'] == "JBowman" or i.member['identifier'] == "NBowman":
+            if i.member['identifier'] == 'MBrown' or i.member['identifier'] == 'MShull' or i.member['identifier'] == 'NTraverse' or i.member['identifier'] == 'BKrusac' or i.member['identifier'] == None or i.member['identifier'] == 'JBowman' or i.member['identifier'] == 'JTrimble' or i.member['identifier'] == 'NBowman' or i.member['identifier'] == '':
                 assign_ticket = schedule_entries_api.ScheduleEntriesAPI(url=cwConfig.cwURL, auth=cwAUTH)
                 assign_ticket.update_schedule_entry(i.id,"ownerFlag",False) 
                 assign_ticket.update_schedule_entry(i.id,"doneFlag",True) 
@@ -291,6 +291,10 @@ for tID in UniqueNames:
                    ### Creates a ticket note
                 ticket_notes = ticket_notes_api.TicketNotesAPI(url=cwConfig.cwURL, auth=cwAUTH, ticket_id=tID)
                 note = ticket_note.TicketNote({"text":"Assigned / BKrusac, MShull, NTraverse /\nThis ticket has been updated with a new Excel Spreadsheet for the FBAR Backup computers with issues.\nPlease see {} and assign to an appropriate engineer with FBAR training.".format(file_name), "detailDescriptionFlag": True, "internalAnalysisFlag": True ,"externalFlag": False})
+                ticket_notes.create_ticket_note(note)
+            else:
+                ticket_notes = ticket_notes_api.TicketNotesAPI(url=cwConfig.cwURL, auth=cwAUTH, ticket_id=tID)
+                note = ticket_note.TicketNote({"text":"This ticket has been updated with a new Excel Spreadsheet for the FBAR Backup computers with issues.\nPlease see {}.".format(file_name), "detailDescriptionFlag": True, "internalAnalysisFlag": True ,"externalFlag": False})
                 ticket_notes.create_ticket_note(note)
     except Exception as e:
         print(e)
