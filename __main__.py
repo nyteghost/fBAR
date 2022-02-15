@@ -3,9 +3,9 @@ import cwConfig
 import doorKey
 import lib
 from datetime import date,tzinfo,datetime, timedelta
-from connectpyse.service import ticket_notes_api, ticket_note,ticket,tickets_api
-from connectpyse.system import member,members_api,document_api
-from connectpyse.schedule import schedule_entries_api,schedule_entry
+from ConnectPyse.service import ticket_notes_api, ticket_note,ticket,tickets_api
+from ConnectPyse.system import member,members_api,document_api
+from ConnectPyse.schedule import schedule_entries_api,schedule_entry
 import requests
 import tabula
 import getpass
