@@ -4,3 +4,4 @@ doorKey.py
 key
 *.pyc
 deprec/
+cwConfig.py
