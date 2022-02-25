@@ -1,20 +1,21 @@
 import sys, os,io
-import cwConfig
-import doorKey
-import lib
 from datetime import date,tzinfo,datetime, timedelta
-from ConnectPyse.service import ticket_notes_api, ticket_note,ticket,tickets_api
-from ConnectPyse.system import member,members_api,document_api
-from ConnectPyse.schedule import schedule_entries_api,schedule_entry
+from connectpyse.service import ticket_notes_api, ticket_note,ticket,tickets_api
+from connectpyse.system import member,members_api,document_api
+from connectpyse.schedule import schedule_entries_api,schedule_entry
 import requests
 import tabula
 import getpass
 from alive_progress import alive_bar,alive_it
 import pandas as pd
 import pyodbc
-import time 
-
-
+import time
+currentdir = os.path.dirname(os.path.realpath(__file__))
+parentdir = os.path.dirname(currentdir)
+sys.path.append(parentdir)
+import doorKey
+import lib
+from lib import cleanUp,my_dictionary,cwURL
 ### Configs
 config = doorKey.tangerine()
 cwAUTH=config['cwAUTH']
@@ -32,22 +33,8 @@ start = today - timedelta(days=today.weekday())
 end = start + timedelta(days=6)
 
 # start = '2022-01-10'
+begin = start
 start = "["+str(start)+"]"
-
-
-### Create an easy dictionay class
-class my_dictionary(dict): 
-    # __init__ function 
-    def __init__(self): 
-        self = dict()   
-    # Function to add key:value 
-    def add(self, key, value): 
-        self[key] = value 
-
-def cleanUp():
-    for f in os.listdir(pdFolder):
-        print(f)
-        os.remove(os.path.join(pdFolder, f))
 
 ### Cleans up any left overs in fBar folder
 cleanUp()
@@ -64,7 +51,7 @@ except Exception as e:
 print(start)
 
 ### Get fBAR Tickets
-gt = tickets_api.TicketsAPI(url=cwConfig.cwURL, auth=cwAUTH)
+gt = tickets_api.TicketsAPI(url=cwURL, auth=cwAUTH)
 gt.conditions = 'company/identifier="Georgia Cyber Academy" AND summary contains "Backup Status Report"  AND _info/dateEntered > {start}'.format(start=start)
 print(gt.conditions)
 gt.pageSize = 10
@@ -73,6 +60,9 @@ gt.fields = 'id'
 gt = gt.get_tickets()
 ls = list(gt)
 id_list = []
+if not ls:
+    print("\nThere were no Backup Status Reports found for the week of ",begin,".\n")
+    exit()
 for i in ls: 
   x = i.id
   y = i.status['name']
@@ -84,8 +74,8 @@ for i in ls:
 doc_list=[]
 id_dict = my_dictionary() 
 for i in id_list:
-  o = tickets_api.TicketsAPI(url=cwConfig.cwURL, auth=cwAUTH)
-  d = document_api.DocumentAPI(url=cwConfig.cwURL, auth=cwAUTH)
+  o = tickets_api.TicketsAPI(url=cwURL, auth=cwAUTH)
+  d = document_api.DocumentAPI(url=cwURL, auth=cwAUTH)
   # Retrieves ticket by Ticket ID
   a_ticket = o.get_ticket_by_id(i)
   # print(a_ticket)
@@ -107,7 +97,7 @@ appended_data=[]
 ticket_dict=my_dictionary()
 test_list=[]
 for tickID,docID in alive_it(id_dict.items()):
-  url = cwConfig.cwURL+'system/documents/{document_id}/download'.format(document_id=docID)
+  url = cwURL+'system/documents/{document_id}/download'.format(document_id=docID)
   response = requests.get(url=url, headers=cwDocumentHeaders)
   with io.BytesIO(response.content) as fh:
       tl = tabula.read_pdf(input_path=fh, pages = "all",output_format="dataframe", stream=True)
@@ -160,18 +150,31 @@ print(appended_data)
 ### Upload DataFrame to GCA Database
 data = appended_data
 
-conn = pyodbc.connect(
-    'Driver={ODBC Driver 17 for SQL Server};'
-    'Server='+(config['database']['Server'])+';'
-    'Database=IsolatedSafety;'
-    'UID='+(config['database']['UID'])+';'
-    'PWD='+(config['database']['PWD'])+';'
-)
-try:
-    cursor = conn.cursor()
-except pyodbc.ProgrammingError as error:
-    print(error)
-    input("Not able to connect to Database.")
+connectionstatus = 0
+while connectionstatus == 0:
+    try:
+        conn = pyodbc.connect(
+            'Driver={ODBC Driver 17 for SQL Server};'
+            'Server='+(config['database']['Server'])+';'
+            'Database=IsolatedSafety;'
+            'UID='+(config['database']['UID'])+';'
+            'PWD='+(config['database']['PWD'])+';',
+            timeout=1
+        )
+    except pyodbc.Error as ex:
+            sqlstate = ex.args[0]
+            print(ex.args[0])
+            if sqlstate == '08001':
+                input("Socket Error. Please check Connection.\n Press enter to retry.")
+                continue
+
+    try:
+        cursor = conn.cursor()
+        print("Connected to database.")
+        connectionstatus = 1
+    except pyodbc.Error as ex:
+        print(ex)
+
 
 
 ### Map columns of DataFrame with SQL Database
@@ -241,15 +244,14 @@ for tID in UniqueNames:
     df = df.reset_index(drop=True)
     print(df)
     file_name = '{}.xlsx'.format(idName+' Backup Report')
-    
     fbar_file=pdFolder+'\\'+file_name
     # fbar_file=r'C:\Users\Mbrown\Southeastern Computer Associates, LLC\GCA Deployment - Documents\Database\Daily Data Sets\fBAR\{}'.format(file_name)
     df.to_excel(fbar_file)
     
 
     ### Get File info
-    o = tickets_api.TicketsAPI(url=cwConfig.cwURL, auth=cwAUTH)
-    d = document_api.DocumentAPI(url=cwConfig.cwURL, auth=cwAUTH)
+    o = tickets_api.TicketsAPI(url=cwURL, auth=cwAUTH)
+    d = document_api.DocumentAPI(url=cwURL, auth=cwAUTH)
     
     a_ticket = o.get_ticket_by_id(ticket_id=tID)
     myDocs = d.get_documents(a_ticket)
@@ -267,7 +269,7 @@ for tID in UniqueNames:
     
     ### Remove current Assigned scheduleEntries
     try:
-        gse = schedule_entries_api.ScheduleEntriesAPI(url=cwConfig.cwURL, auth=cwAUTH)
+        gse = schedule_entries_api.ScheduleEntriesAPI(url=cwURL, auth=cwAUTH)
         gse.conditions = 'objectId ={} AND doneFlag=False'.format(tID)
         gse.pageSize = 10
         gse = gse.get_schedule_entries()
@@ -276,12 +278,12 @@ for tID in UniqueNames:
             print(i.id)
             print(i.member['identifier'])
             if i.member['identifier'] == 'MBrown' or i.member['identifier'] == 'MShull' or i.member['identifier'] == 'NTraverse' or i.member['identifier'] == 'BKrusac' or i.member['identifier'] == None or i.member['identifier'] == 'JBowman' or i.member['identifier'] == 'JTrimble' or i.member['identifier'] == 'NBowman' or i.member['identifier'] == '':
-                assign_ticket = schedule_entries_api.ScheduleEntriesAPI(url=cwConfig.cwURL, auth=cwAUTH)
+                assign_ticket = schedule_entries_api.ScheduleEntriesAPI(url=cwURL, auth=cwAUTH)
                 assign_ticket.update_schedule_entry(i.id,"ownerFlag",False) 
                 assign_ticket.update_schedule_entry(i.id,"doneFlag",True) 
                  ### Assigns ticket
                 itID = int(tID)
-                assign_ticket = schedule_entries_api.ScheduleEntriesAPI(url=cwConfig.cwURL, auth=cwAUTH)
+                assign_ticket = schedule_entries_api.ScheduleEntriesAPI(url=cwURL, auth=cwAUTH)
                 assigned = schedule_entry.ScheduleEntry({"objectId": itID, "member":{"identifier":"BKrusac"},"type": { "identifier": "S" }})
                 assign_ticket.create_schedule_entry(assigned)
                 assigned = schedule_entry.ScheduleEntry({"objectId": itID, "member":{"identifier":"MShull"},"type": { "identifier": "S" },"ownerFlag": True})
@@ -289,16 +291,16 @@ for tID in UniqueNames:
                 assigned = schedule_entry.ScheduleEntry({"objectId": itID, "member":{"identifier":"NTraverse"},"type": { "identifier": "S" }})
                 assign_ticket.create_schedule_entry(assigned)
                    ### Creates a ticket note
-                ticket_notes = ticket_notes_api.TicketNotesAPI(url=cwConfig.cwURL, auth=cwAUTH, ticket_id=tID)
+                ticket_notes = ticket_notes_api.TicketNotesAPI(url=cwURL, auth=cwAUTH, ticket_id=tID)
                 note = ticket_note.TicketNote({"text":"Assigned / BKrusac, MShull, NTraverse /\nThis ticket has been updated with a new Excel Spreadsheet for the FBAR Backup computers with issues.\nPlease see {} and assign to an appropriate engineer with FBAR training.".format(file_name), "detailDescriptionFlag": True, "internalAnalysisFlag": True ,"externalFlag": False})
                 ticket_notes.create_ticket_note(note)
             else:
-                ticket_notes = ticket_notes_api.TicketNotesAPI(url=cwConfig.cwURL, auth=cwAUTH, ticket_id=tID)
+                ticket_notes = ticket_notes_api.TicketNotesAPI(url=cwURL, auth=cwAUTH, ticket_id=tID)
                 note = ticket_note.TicketNote({"text":"This ticket has been updated with a new Excel Spreadsheet for the FBAR Backup computers with issues.\nPlease see {}.".format(file_name), "detailDescriptionFlag": True, "internalAnalysisFlag": True ,"externalFlag": False})
                 ticket_notes.create_ticket_note(note)
     except Exception as e:
         print(e)
-        print('Broke at "Remove current Assigned acheduleEntries"')
+        print('Broke at "Remove current Assigned scheduleEntries"')
 
 
    

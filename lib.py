@@ -8,10 +8,22 @@ import requests
 import json
 import pickle
 import time
+import getpass
+
 config=doorKey.tangerine()
 tokenHeader = config['cwaHeader']
+cwURL = 'https://api-na.myconnectwise.net/v2021_3/apis/3.0/'
+### fBAR folder location
+prefix = r"C:\Users"
+localuser = getpass.getuser()
+suffix= r"\Southeastern Computer Associates, LLC\GCA Deployment - Documents\Database\Daily Data Sets\fBAR"
+pdFolder = prefix + "\\"+ localuser + suffix
+### Create an easy dictionay class
 
-
+def cleanUp():
+    for f in os.listdir(pdFolder):
+        print(f)
+        os.remove(os.path.join(pdFolder, f))
 class my_dictionary(dict): 
     # __init__ function 
     def __init__(self): 
@@ -49,7 +61,7 @@ def refreshToken():
     file.close()
     for i in data:
         token = i
-    print("old token was",i)
+    # print("old token was",i)
     response = requests.post(url=api_request, headers=tokenHeader,json=token)
     data=[]
     dict = response.json()
@@ -104,3 +116,25 @@ def getSpecificComputer(computerName,compDICT=''):
             print(i)
             computerName=i['ComputerName']
             serialNumber=i['SerialNumber']
+
+def getcwaHEADER():
+        file = open('token', 'rb')
+        data = pickle.load(file)
+        file.close()
+        for i in data:
+               i
+        token = "Bearer "+ i
+        cwaGetHeader = {
+                "Authorization":token,
+                'clientId':config['cwaHeader']['clientID'],
+                "Content-Type":"application/json"
+                }
+        return(cwaGetHeader)
+
+def cwlogin(mfa):
+    cwAloginCreds = {
+            "Username":config['cwAlogin']['Username'],
+            "Password":config['cwAlogin']['Password'],
+            "TwoFactorPasscode":mfa
+            }
+    return(cwAloginCreds)
