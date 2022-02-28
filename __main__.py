@@ -1,4 +1,5 @@
 import sys, os,io
+from sys import exit
 from datetime import date,tzinfo,datetime, timedelta
 from connectpyse.service import ticket_notes_api, ticket_note,ticket,tickets_api
 from connectpyse.system import member,members_api,document_api
@@ -21,6 +22,32 @@ config = doorKey.tangerine()
 cwAUTH=config['cwAUTH']
 cwDocumentHeaders = config['cwDocumentHeaders']
 
+### SQL Connection
+connectionstatus = 0
+while connectionstatus == 0:
+    try:
+        conn = pyodbc.connect(
+            'Driver={ODBC Driver 17 for SQL Server};'
+            'Server='+(config['database']['Server'])+';'
+            'Database=IsolatedSafety;'
+            'UID='+(config['database']['UID'])+';'
+            'PWD='+(config['database']['PWD'])+';',
+            timeout=1
+        )
+    except pyodbc.Error as ex:
+            sqlstate = ex.args[0]
+            print(ex.args[0])
+            if sqlstate == '08001':
+                input("Socket Error. Please check Connection.\n Press enter to retry.")
+                continue
+
+    try:
+        cursor = conn.cursor()
+        print("Connected to database.")
+        connectionstatus = 1
+    except pyodbc.Error as ex:
+        print(ex)
+
 ### fBAR folder location
 prefix = r"C:\Users"
 localuser = getpass.getuser()
@@ -41,11 +68,10 @@ cleanUp()
 
 ### Generate MFA Request
 try:
-    lib.refreshToken()
-    time.sleep(5)
-except Exception as e:
     lib.getToken()
     time.sleep(10)
+except Exception as e:
+    print(e)
 
 ### Start should equal beginning of current week
 print(start)
@@ -61,7 +87,9 @@ gt = gt.get_tickets()
 ls = list(gt)
 id_list = []
 if not ls:
-    print("\nThere were no Backup Status Reports found for the week of ",begin,".\n")
+    print("\nThere were no Backup Status Reports found for the week of ",begin,".\nPress enter to exit.")
+    input()
+    conn.close()
     exit()
 for i in ls: 
   x = i.id
@@ -149,32 +177,6 @@ print(appended_data)
 
 ### Upload DataFrame to GCA Database
 data = appended_data
-
-connectionstatus = 0
-while connectionstatus == 0:
-    try:
-        conn = pyodbc.connect(
-            'Driver={ODBC Driver 17 for SQL Server};'
-            'Server='+(config['database']['Server'])+';'
-            'Database=IsolatedSafety;'
-            'UID='+(config['database']['UID'])+';'
-            'PWD='+(config['database']['PWD'])+';',
-            timeout=1
-        )
-    except pyodbc.Error as ex:
-            sqlstate = ex.args[0]
-            print(ex.args[0])
-            if sqlstate == '08001':
-                input("Socket Error. Please check Connection.\n Press enter to retry.")
-                continue
-
-    try:
-        cursor = conn.cursor()
-        print("Connected to database.")
-        connectionstatus = 1
-    except pyodbc.Error as ex:
-        print(ex)
-
 
 
 ### Map columns of DataFrame with SQL Database

@@ -2,7 +2,6 @@ import sys, os
 currentdir = os.path.dirname(os.path.realpath(__file__))
 parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
-import cwConfig
 import doorKey
 import requests
 import json
@@ -10,9 +9,12 @@ import pickle
 import time
 import getpass
 
+### Config
 config=doorKey.tangerine()
 tokenHeader = config['cwaHeader']
 cwURL = 'https://api-na.myconnectwise.net/v2021_3/apis/3.0/'
+cwAURL = 'https://sca-atl.hostedrmm.com/cwa/api/v1/'
+
 ### fBAR folder location
 prefix = r"C:\Users"
 localuser = getpass.getuser()
@@ -35,16 +37,16 @@ class my_dictionary(dict):
 
 def getToken():
     mfa = input("Enter MFA: ")
-    loginCRED = cwConfig.cwlogin(mfa)
-    api_request = cwConfig.cwAURL+'/'+'apitoken'
+    loginCRED = cwlogin(mfa)
+    api_request = cwAURL+'/'+'apitoken'
     response = requests.post(url=api_request, headers=tokenHeader,json=loginCRED)
     dict = response.json()
     accessToken = dict.get('AccessToken')
     data=[]
     data.append(accessToken)
-    file = open('token','wb')
-    pickle.dump(data, file)
-    file.close()
+    # file = open('token','wb')
+    # pickle.dump(data, file)
+    # file.close()
     print('Token Generated.')
     if response.status_code != 200:
         print(api_request)
@@ -55,7 +57,7 @@ def getToken():
 
 
 def refreshToken():
-    api_request = cwConfig.cwAURL+'/'+'apitoken/refresh'
+    api_request = cwAURL+'/'+'apitoken/refresh'
     file = open('token', 'rb')
     data = pickle.load(file)
     file.close()
@@ -79,8 +81,8 @@ def refreshToken():
 
 
 def getSpecificComputer(computerName,compDICT=''):
-    cwaGetHeader= cwConfig.getcwaHEADER()
-    api_request = cwConfig.cwAURL+'/'+'Computers?condition=ComputerName ="{computer}"'.format(computer=computerName)
+    cwaGetHeader= getcwaHEADER()
+    api_request = cwAURL+'/'+'Computers?condition=ComputerName ="{computer}"'.format(computer=computerName)
     response = requests.get(url=api_request, headers=cwaGetHeader)
     rt = response.text
     try:

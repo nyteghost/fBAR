@@ -5,3 +5,8 @@ key
 *.pyc
 deprec/
 cwConfig.py
+build/
+dist/
+__main__.spec
+setup.txt
+__main__.spec.backup
