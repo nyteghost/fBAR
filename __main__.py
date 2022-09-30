@@ -51,7 +51,7 @@ while connectionstatus == 0:
 ### fBAR folder location
 prefix = r"C:\Users"
 localuser = getpass.getuser()
-suffix= r"\Southeastern Computer Associates, LLC\GCA Deployment - Documents\Database\Daily Data Sets\fBAR"
+suffix= r"" #enter fbar location here
 pdFolder = prefix + "\\"+ localuser + suffix
 
 ### Set up for start = beginning of week
@@ -78,7 +78,7 @@ print(start)
 
 ### Get fBAR Tickets
 gt = tickets_api.TicketsAPI(url=cwURL, auth=cwAUTH)
-gt.conditions = 'company/identifier="Georgia Cyber Academy" AND summary contains "Backup Status Report"  AND _info/dateEntered > {start}'.format(start=start)
+gt.conditions = 'company/identifier="A Georgian School" AND summary contains "Backup Status Report"  AND _info/dateEntered > {start}'.format(start=start)
 print(gt.conditions)
 gt.pageSize = 10
 gt.orderBy = '_info/dateEntered'
@@ -175,7 +175,7 @@ appended_data['Serial Number'] = appended_data['Device Name'].map(comp_dict)
 appended_data['Automate Status'] = appended_data['Device Name'].map(comp_dict_empty)
 print(appended_data)
 
-### Upload DataFrame to GCA Database
+### Upload DataFrame to Database
 data = appended_data
 
 
@@ -247,7 +247,6 @@ for tID in UniqueNames:
     print(df)
     file_name = '{}.xlsx'.format(idName+' Backup Report')
     fbar_file=pdFolder+'\\'+file_name
-    # fbar_file=r'C:\Users\Mbrown\Southeastern Computer Associates, LLC\GCA Deployment - Documents\Database\Daily Data Sets\fBAR\{}'.format(file_name)
     df.to_excel(fbar_file)
     
 
@@ -279,22 +278,22 @@ for tID in UniqueNames:
         for i in ls:
             print(i.id)
             print(i.member['identifier'])
-            if i.member['identifier'] == 'MBrown' or i.member['identifier'] == 'MShull' or i.member['identifier'] == 'NTraverse' or i.member['identifier'] == 'BKrusac' or i.member['identifier'] == None or i.member['identifier'] == 'JBowman' or i.member['identifier'] == 'JTrimble' or i.member['identifier'] == 'NBowman' or i.member['identifier'] == '':
+            if i.member['identifier'] == 'MBrown' or i.member['identifier'] == 'ASPerson' or i.member['identifier'] == 'AASPerson' or i.member['identifier'] == 'SPerson' or i.member['identifier'] == None or i.member['identifier'] == 'JPerson' or i.member['identifier'] == 'JAPerson' or i.member['identifier'] == 'JASPerson' or i.member['identifier'] == '':
                 assign_ticket = schedule_entries_api.ScheduleEntriesAPI(url=cwURL, auth=cwAUTH)
                 assign_ticket.update_schedule_entry(i.id,"ownerFlag",False) 
                 assign_ticket.update_schedule_entry(i.id,"doneFlag",True) 
                  ### Assigns ticket
                 itID = int(tID)
                 assign_ticket = schedule_entries_api.ScheduleEntriesAPI(url=cwURL, auth=cwAUTH)
-                assigned = schedule_entry.ScheduleEntry({"objectId": itID, "member":{"identifier":"BKrusac"},"type": { "identifier": "S" }})
+                assigned = schedule_entry.ScheduleEntry({"objectId": itID, "member":{"identifier":"SPerson"},"type": { "identifier": "S" }})
                 assign_ticket.create_schedule_entry(assigned)
-                assigned = schedule_entry.ScheduleEntry({"objectId": itID, "member":{"identifier":"MShull"},"type": { "identifier": "S" },"ownerFlag": True})
+                assigned = schedule_entry.ScheduleEntry({"objectId": itID, "member":{"identifier":"ASPerson"},"type": { "identifier": "S" },"ownerFlag": True})
                 assign_ticket.create_schedule_entry(assigned)
-                assigned = schedule_entry.ScheduleEntry({"objectId": itID, "member":{"identifier":"NTraverse"},"type": { "identifier": "S" }})
+                assigned = schedule_entry.ScheduleEntry({"objectId": itID, "member":{"identifier":"AASPerson"},"type": { "identifier": "S" }})
                 assign_ticket.create_schedule_entry(assigned)
                    ### Creates a ticket note
                 ticket_notes = ticket_notes_api.TicketNotesAPI(url=cwURL, auth=cwAUTH, ticket_id=tID)
-                note = ticket_note.TicketNote({"text":"Assigned / BKrusac, MShull, NTraverse /\nThis ticket has been updated with a new Excel Spreadsheet for the FBAR Backup computers with issues.\nPlease see {} and assign to an appropriate engineer with FBAR training.".format(file_name), "detailDescriptionFlag": True, "internalAnalysisFlag": True ,"externalFlag": False})
+                note = ticket_note.TicketNote({"text":"Assigned / SPerson, ASPerson, AASPerson /\nThis ticket has been updated with a new Excel Spreadsheet for the FBAR Backup computers with issues.\nPlease see {} and assign to an appropriate engineer with FBAR training.".format(file_name), "detailDescriptionFlag": True, "internalAnalysisFlag": True ,"externalFlag": False})
                 ticket_notes.create_ticket_note(note)
             else:
                 ticket_notes = ticket_notes_api.TicketNotesAPI(url=cwURL, auth=cwAUTH, ticket_id=tID)
